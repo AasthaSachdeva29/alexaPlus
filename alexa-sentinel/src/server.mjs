@@ -7,8 +7,15 @@ import { handleUtterance } from "./orchestrator.mjs";
 import { store } from "./store.mjs";
 
 const PORT = Number(process.env.PORT || 3000);
-const HOST = process.env.HOST || "127.0.0.1"; // bind to localhost by default (MCP spec DNS-rebinding guidance)
-const ALLOWED_ORIGINS = new Set((process.env.ALLOWED_ORIGINS || `http://localhost:${PORT},http://127.0.0.1:${PORT}`).split(","));
+// Bind to 0.0.0.0 so Render's routing proxy can detect the open port
+const HOST = process.env.HOST || "0.0.0.0";
+
+const ALLOWED_ORIGINS = new Set(
+  (
+    process.env.ALLOWED_ORIGINS ||
+    `http://localhost:${PORT},http://127.0.0.1:${PORT},http://0.0.0.0:${PORT}`
+  ).split(",")
+);
 const MCP_API_KEY = process.env.MCP_API_KEY || ""; // optional bearer auth for real deployments
 
 const app = express();
@@ -17,8 +24,13 @@ app.use(express.json({ limit: "256kb" }));
 // --- MCP endpoint (Streamable HTTP, stateless) ------------------------------
 function guard(req, res, next) {
   const origin = req.headers.origin;
-  if (origin && !ALLOWED_ORIGINS.has(origin)) return res.status(403).json({ error: "origin not allowed" });
-  if (MCP_API_KEY && req.headers.authorization !== `Bearer ${MCP_API_KEY}`) return res.status(401).json({ error: "unauthorized" });
+  // If ALLOWED_ORIGINS is configured and origin header exists, validate it
+  if (origin && process.env.ALLOWED_ORIGINS && !ALLOWED_ORIGINS.has(origin)) {
+    return res.status(403).json({ error: "origin not allowed" });
+  }
+  if (MCP_API_KEY && req.headers.authorization !== `Bearer ${MCP_API_KEY}`) {
+    return res.status(401).json({ error: "unauthorized" });
+  }
   next();
 }
 
@@ -67,5 +79,5 @@ app.get("/healthz", (_req, res) => res.json({ ok: true }));
 app.use(express.static(path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "public")));
 
 app.listen(PORT, HOST, () => {
-  console.log(`Sentinel running: web app http://${HOST}:${PORT}  |  MCP endpoint http://${HOST}:${PORT}/mcp`);
+  console.log(`Sentinel running on ${HOST}:${PORT} (Web & MCP)`);
 });
