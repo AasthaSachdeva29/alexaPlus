@@ -1,0 +1,19 @@
+{
+  "name": "alexa-sentinel",
+  "version": "1.0.0",
+  "description": "Sentinel: a home-network guardian MCP server for Alexa+ with a simulated Alexa+ web experience",
+  "main": "index.js",
+  "scripts": {
+    "test": "node test/e2e.mjs",
+    "start": "node src/server.mjs"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.32.1",
+    "express": "^5.3.0",
+    "zod": "^4.6.7"
+  },
+  "type": "module"
+}

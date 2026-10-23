@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sentinel for Alexa+ (simulator)</title>
+<style>
+  :root{
+    --bg:#070b14; --panel:#0e1524; --panel2:#121b2e; --line:#1e2a44; --text:#e8eefc; --mute:#8a99bb;
+    --cyan:#2fd4ff; --green:#35e0a1; --amber:#ffb84d; --red:#ff5d73; --violet:#9b8cff;
+  }
+  *{box-sizing:border-box} html,body{height:100%}
+  body{margin:0;background:radial-gradient(1200px 600px at 20% -10%,#0f2a4a55,transparent),var(--bg);color:var(--text);font:15px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+  header{display:flex;align-items:center;gap:12px;padding:14px 20px;border-bottom:1px solid var(--line)}
+  header h1{font-size:17px;margin:0;font-weight:650;letter-spacing:.2px}
+  header .tag{font-size:12px;color:var(--cyan);border:1px solid #2fd4ff55;padding:2px 8px;border-radius:99px}
+  header .sp{flex:1} button{font:inherit;color:var(--text);cursor:pointer}
+  .ghost{background:transparent;border:1px solid var(--line);padding:6px 12px;border-radius:8px}
+  .ghost:hover{border-color:var(--cyan)}
+  main{display:grid;grid-template-columns:minmax(340px,430px) 1fr;gap:16px;padding:16px 20px;height:calc(100% - 58px)}
+  @media(max-width:980px){main{grid-template-columns:1fr;height:auto}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:16px;min-height:0}
+  /* Alexa+ simulator */
+  .echo{display:flex;flex-direction:column;padding:16px;gap:12px;height:100%}
+  .orbwrap{display:flex;align-items:center;gap:14px}
+  .orb{width:54px;height:54px;border-radius:50%;flex:none;border:3px solid var(--cyan);box-shadow:0 0 18px #2fd4ff66,inset 0 0 14px #2fd4ff44;transition:.2s}
+  .orb.listening{animation:pulse 1s infinite;border-color:var(--green);box-shadow:0 0 26px #35e0a199}
+  .orb.thinking{animation:spin 1s linear infinite;border-color:var(--cyan) var(--cyan) transparent var(--cyan)}
+  .orb.speaking{animation:pulse .6s infinite;border-color:var(--violet);box-shadow:0 0 26px #9b8cff99}
+  @keyframes pulse{50%{transform:scale(1.1)}} @keyframes spin{to{transform:rotate(360deg)}}
+  .status{color:var(--mute);font-size:13px}
+  .chat{flex:1;overflow:auto;display:flex;flex-direction:column;gap:10px;padding:4px;min-height:200px}
+  .bubble{max-width:88%;padding:10px 13px;border-radius:14px;white-space:pre-wrap}
+  .me{align-self:flex-end;background:#16335a;border-bottom-right-radius:4px}
+  .al{align-self:flex-start;background:var(--panel2);border:1px solid var(--line);border-bottom-left-radius:4px}
+  .chips{display:flex;flex-wrap:wrap;gap:6px}
+  .chip{background:var(--panel2);border:1px solid var(--line);padding:6px 10px;border-radius:99px;font-size:13px}
+  .chip:hover{border-color:var(--cyan)}
+  .inputrow{display:flex;gap:8px}
+  .inputrow input{flex:1;background:var(--panel2);border:1px solid var(--line);color:var(--text);padding:11px 12px;border-radius:12px;font:inherit}
+  .inputrow input:focus{outline:2px solid #2fd4ff66}
+  .mic{width:46px;border-radius:12px;border:1px solid var(--line);background:var(--panel2);font-size:18px}
+  .mic.on{background:#0f3a2c;border-color:var(--green)}
+  .send{background:var(--cyan);color:#041018;border:0;padding:0 16px;border-radius:12px;font-weight:650}
+  .opt{display:flex;gap:14px;color:var(--mute);font-size:12.5px;align-items:center}
+  /* right column */
+  .right{display:grid;grid-template-rows:auto auto 1fr;gap:16px;min-height:0}
+  .top{display:grid;grid-template-columns:200px 1fr;gap:16px;padding:16px}
+  .gauge{display:flex;flex-direction:column;align-items:center;justify-content:center}
+  .gauge svg{width:150px;height:150px}
+  .gauge .g{font-size:12px;color:var(--mute);margin-top:-6px}
+  .alerts{display:flex;flex-direction:column;gap:6px;max-height:150px;overflow:auto}
+  .alert{display:flex;gap:8px;align-items:center;font-size:13.5px;padding:6px 8px;border-radius:8px;background:var(--panel2);border:1px solid var(--line)}
+  .alert.contained,.alert.resolved{opacity:.5;text-decoration:line-through}
+  .dot{width:9px;height:9px;border-radius:50%;flex:none}
+  h3{margin:0 0 8px;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--mute);font-weight:600}
+  .devs{padding:14px 16px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+  .dev{padding:9px 10px;border-radius:10px;background:var(--panel2);border:1px solid var(--line);font-size:13px;transition:.3s}
+  .dev .r{color:var(--mute);font-size:11.5px}
+  .dev.high{border-color:var(--red);box-shadow:0 0 0 1px #ff5d7344}
+  .dev.medium{border-color:var(--amber)} .dev.low{border-color:#ffe08a55}
+  .dev.contained{border-color:var(--green);background:#0d2a22}
+  .dev.flash{animation:flash 1s}
+  @keyframes flash{0%{background:#2fd4ff55}100%{}}
+  .trace{padding:14px 16px;display:flex;flex-direction:column;min-height:0}
+  .tracebody{overflow:auto;flex:1;font:12.5px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace}
+  .tr{border-left:2px solid var(--line);padding:2px 0 8px 10px;margin-left:4px}
+  .tr b{color:var(--cyan)} .tr .m{color:var(--mute)} .tr.call{border-color:var(--violet)}
+  pre{margin:4px 0 0;white-space:pre-wrap;word-break:break-word;color:#c5d3f5;background:#0a1120;padding:8px;border-radius:8px;border:1px solid var(--line)}
+  .empty{color:var(--mute);font-size:13px}
+</style>
+</head>
+<body>
+<header>
+  <h1>🛡️ Sentinel</h1><span class="tag">Alexa+ MCP skill · simulator</span>
+  <div class="sp"></div>
+  <button class="ghost" id="demo">▶ Auto-play demo</button>
+  <button class="ghost" id="reset">↺ Reset home</button>
+</header>
+<main>
+  <section class="card echo" aria-label="Simulated Alexa+ device">
+    <div class="orbwrap"><div class="orb" id="orb"></div>
+      <div><div style="font-weight:650">Simulated Alexa+</div><div class="status" id="status">Say "Alexa, how safe is my home network?"</div></div></div>
+    <div class="chat" id="chat" aria-live="polite"></div>
+    <div class="chips" id="chips"></div>
+    <div class="inputrow">
+      <button class="mic" id="mic" title="Hold to talk / click to toggle" aria-label="Microphone">🎙️</button>
+      <input id="text" placeholder="Type or tap the mic..." autocomplete="off" aria-label="Message">
+      <button class="send" id="send">Send</button>
+    </div>
+    <div class="opt"><label><input type="checkbox" id="tts" checked> Alexa speaks replies</label><span id="micnote"></span></div>
+  </section>
+
+  <section class="right">
+    <div class="card top">
+      <div class="gauge">
+        <svg viewBox="0 0 120 120"><circle cx="60" cy="60" r="50" fill="none" stroke="#1e2a44" stroke-width="10"/>
+          <circle id="arc" cx="60" cy="60" r="50" fill="none" stroke="#2fd4ff" stroke-width="10" stroke-linecap="round" stroke-dasharray="0 314" transform="rotate(-90 60 60)" style="transition:stroke-dasharray .8s,stroke .8s"/>
+          <text id="score" x="60" y="66" text-anchor="middle" fill="#e8eefc" font-size="30" font-weight="700">--</text></svg>
+        <div class="g" id="grade">Home security score</div>
+      </div>
+      <div><h3>Live alerts</h3><div class="alerts" id="alerts"></div></div>
+    </div>
+    <div class="card devs"><h3>Devices on your network</h3><div class="grid" id="devs"></div></div>
+    <div class="card trace"><h3>Under the hood: MCP trace (Streamable HTTP, spec 2025-11-25)</h3>
+      <div class="tracebody" id="trace"><div class="empty">Every spoken request becomes real MCP calls: initialize → tools/list → tools/call. They appear here.</div></div></div>
+  </section>
+</main>
+
+<script>
+const $ = (s) => document.querySelector(s);
+const conversationId = "c-" + Math.random().toString(36).slice(2, 8);
+const orb = $("#orb"), chat = $("#chat"), statusEl = $("#status");
+const colors = {high:"var(--red)", medium:"var(--amber)", low:"#ffe08a", none:"var(--green)", contained:"var(--green)"};
+let prevRisk = {};
+
+const CHIPS = ["How safe is my home network?","Explain the top alert","Isolate the garage smart plug","Yes","What devices are risky?","Scan the nursery camera","Good night","Give me my weekly digest"];
+$("#chips").innerHTML = CHIPS.map((c) => `<button class="chip">${c}</button>`).join("");
+$("#chips").onclick = (e) => { if (e.target.classList.contains("chip")) say(e.target.textContent); };
+
+function setOrb(state, label){ orb.className = "orb " + (state||""); if(label) statusEl.textContent = label; }
+function bubble(cls, t){ const d = document.createElement("div"); d.className = "bubble " + cls; d.textContent = t; chat.appendChild(d); chat.scrollTop = chat.scrollHeight; }
+
+async function say(text){
+  text = text.trim(); if(!text) return;
+  $("#text").value = ""; bubble("me", text); setOrb("thinking", "Thinking…");
+  try{
+    const r = await fetch("/api/chat", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({text, conversationId})});
+    const j = await r.json();
+    bubble("al", j.speech || "Sorry, something went wrong.");
+    if (j.state) render(j.state);
+    renderTrace(j.trace || []);
+    await speak(j.speech);
+  }catch(e){ bubble("al","I could not reach Sentinel. Is the server running?"); }
+  setOrb("", j_status());
+}
+function j_status(){ return 'Say "Alexa, how safe is my home network?"'; }
+
+function speak(text){
+  return new Promise((res)=>{
+    if(!$("#tts").checked || !("speechSynthesis" in window) || !text){ res(); return; }
+    speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(text); u.rate = 1.03;
+    u.onstart = () => setOrb("speaking","Speaking…"); u.onend = u.onerror = () => res();
+    speechSynthesis.speak(u);
+  });
+}
+
+function render(s){
+  const score = s.score, circ = 314;
+  $("#score").textContent = score; $("#grade").textContent = "Grade " + s.grade + " · home security score";
+  const arc = $("#arc"); arc.setAttribute("stroke-dasharray", `${circ*score/100} ${circ}`);
+  arc.setAttribute("stroke", score>=75?"#35e0a1":score>=50?"#ffb84d":"#ff5d73");
+  $("#alerts").innerHTML = s.alerts.map((a)=>`<div class="alert ${a.status}"><span class="dot" style="background:${colors[a.severity==='high'?'high':a.severity==='medium'?'medium':'low']}"></span><span>${a.title}</span></div>`).join("");
+  $("#devs").innerHTML = s.devices.map((d)=>`<div class="dev ${d.risk} ${prevRisk[d.id] && prevRisk[d.id]!==d.risk?'flash':''}"><div>${d.name}</div><div class="r">${d.room} · ${d.status==='quarantined'?'🔒 isolated':d.risk==='none'?'healthy':d.risk+' risk'}</div></div>`).join("");
+  prevRisk = Object.fromEntries(s.devices.map((d)=>[d.id,d.risk]));
+}
+function esc(s){ return String(s).replace(/[&<>]/g, (c)=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c])); }
+function renderTrace(items){
+  if(!items.length) return;
+  const t = $("#trace"); if (t.querySelector(".empty")) t.innerHTML = "";
+  for(const it of items){
+    const d = document.createElement("div"); d.className = "tr " + (it.step==="tools/call"?"call":"");
+    d.innerHTML = it.step==="tools/call"
+      ? `<b>tools/call</b> <span class="m">${esc(it.tool)} · ${it.ms}ms ${it.isError?'· error':''}</span><pre>arguments: ${esc(JSON.stringify(it.arguments))}\nstructuredContent: ${esc(JSON.stringify(it.structured,null,1))}</pre>`
+      : `<b>${esc(it.step)}</b> <span class="m">${esc(it.detail)} · ${it.ms}ms</span>`;
+    t.appendChild(d);
+  }
+  t.scrollTop = t.scrollHeight;
+}
+
+$("#send").onclick = () => say($("#text").value);
+$("#text").addEventListener("keydown", (e)=>{ if(e.key==="Enter") say($("#text").value); });
+$("#reset").onclick = async () => { const r = await fetch("/api/reset",{method:"POST"}); render(await r.json()); chat.innerHTML=""; $("#trace").innerHTML='<div class="empty">Reset. Ask Alexa+ something.</div>'; prevRisk={}; };
+
+// Voice input via the Web Speech API (Chrome/Edge). Falls back to typing silently.
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+let rec = null, listening = false;
+if(SR){
+  rec = new SR(); rec.lang = "en-US"; rec.interimResults = false;
+  rec.onresult = (e) => say(e.results[0][0].transcript);
+  rec.onend = () => { listening = false; $("#mic").classList.remove("on"); if(orb.classList.contains("listening")) setOrb("", j_status()); };
+  $("#mic").onclick = () => { if(listening){ rec.stop(); return; } speechSynthesis.cancel(); listening = true; $("#mic").classList.add("on"); setOrb("listening","Listening…"); rec.start(); };
+} else { $("#mic").disabled = true; $("#micnote").textContent = "Voice input needs Chrome or Edge"; }
+
+// Auto-play: a scripted walkthrough (great for the 3-minute demo video)
+$("#demo").onclick = async () => {
+  await $("#reset").onclick();
+  const script = ["Alexa, how safe is my home network?","Explain the top alert","Isolate the garage smart plug","Yes","What devices are risky?","Explain the nursery camera in technical detail","Good night"];
+  for (const line of script){ await say(line); await new Promise((r)=>setTimeout(r,1200)); }
+};
+
+fetch("/api/state").then((r)=>r.json()).then(render);
+</script>
+</body>
+</html>
